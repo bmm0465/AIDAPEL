@@ -1,166 +1,155 @@
-# AIEEBSS
+# AI Diagnostic Assessment Platform for Primary English Literacy: AIDAPEL
 
-초등 영어 기초 학력 진단을 위한 웹 플랫폼입니다. 로그인 후 로비에서 **6교시 평가**를 순서대로 진행하고, 결과는 세션 단위로 조회할 수 있습니다. 교사 계정은 담당 학생의 결과 분석·내보내기·문항·교육과정 도구를 사용할 수 있습니다.
+> **안내**: 본 플랫폼의 구체적인 개발 배경 및 모델 평가 관련 상세 내용은 반드시 **[개발 보고서(논문)](./AI_초등영어_기초학력_진단_플랫폼_개발_보고서.md)**를 참조하시기 바랍니다.  
+> 본 문서(리드미)는 누구나 쉽게 플랫폼의 구조를 이해하고 직관적으로 시작할 수 있도록 최대한 핵심만을 간략히 요약하여 전달합니다.
 
-## 평가 구성 (6교시)
+**✅ 바로 접근할 수 있는 주요 문서 및 자료 (클릭하세요)**
+- 📄 [AI 초등영어 기초학력 진단 플랫폼 개발 보고서](./AI_초등영어_기초학력_진단_플랫폼_개발_보고서.md) 
+- 📘 [플랫폼 사용자 가이드](./AIDTPEL%20사용자%20가이드(2025-12-02).html) 
+- 📊 [소개용 PPT 자료](./PPT.html)
 
-| 교시 | 경로 | 설명(로비 기준) |
-|------|------|------------------|
-| 1교시 | `/test/p1_alphabet` | 알파벳 대소문자를 소리 내어 읽기 |
-| 2교시 | `/test/p2_segmental_phoneme` | 단어를 듣고 올바른 단어 또는 알파벳 고르기 |
-| 3교시 | `/test/p3_suprasegmental_phoneme` | 단어를 듣고 올바른 강세 고르기 |
-| 4교시 | `/test/p4_phonics` | 무의미 단어·단어·문장을 소리 내어 읽기 |
-| 5교시 | `/test/p5_vocabulary` | 단어·어구·문장을 듣거나 읽고 올바른 그림 고르기 |
-| 6교시 | `/test/p6_comprehension` | 대화를 듣거나 읽고 질문에 맞는 그림 고르기 |
+---
 
-일부 서버 코드의 전사·분석 유틸리티 이름에 DIBELS 계열 관례가 남아 있을 수 있습니다. 현재 사용자-facing 평가 흐름은 위 6교시 기준입니다.
+## 📌 시스템 아키텍처 (모델 구성 컴포넌트)
 
-## 주요 기능
+본 플랫폼의 시스템은 다음의 아키텍처로 구성되어 다양한 모델이 유기적으로 데이터를 주고받습니다.
 
-- **학생**: 로비(`/lobby`)에서 교시별 평가 시작, 이전 결과(`/results`, 세션별 `/results/sessions/...`)
-- **AI**: OpenAI API 기반 음성 전사·TTS·세션 피드백(Hattie 프롬프트 체계) 등
-- **선택·교사용 전사 비교**: 여러 전사 백엔드(OpenAI, Gemini, AWS, Azure)를 쓰는 코드가 있으며, 사용 시 해당 API 키가 필요합니다
-- **교사**: 대시보드, 학생 상세, 전사 정확도 도구, 문항·생성 문항·교육과정 데이터, Excel 결과 내보내기 등 (`/teacher/*`)
-- **문항 생성 에이전트**: 교육과정 PDF·요청을 바탕으로 한 생성 파이프라인(`src/lib/agents/`, `/api/agents/*`, `/api/curriculum/*` 등)
-
-## 기술 스택
-
-- **앱**: Next.js 15.5, React 19, TypeScript, Tailwind CSS 4
-- **개발 서버**: `next dev --turbopack` (`npm run dev`)
-- **백엔드·데이터**: Next.js Route Handlers, Supabase(Auth, PostgreSQL, Storage)
-- **AI·클라우드 SDK**: `openai`, `@google/generative-ai`, `@aws-sdk/client-s3`, `@aws-sdk/client-transcribe`
-- **기타**: `pdf-parse`, `sharp`, `xlsx` 등
-- **E2E**: Playwright (`playwright.config.ts`, `tests/`)
-
-## 시작하기
-
-### 1. 저장소와 의존성
-
-```bash
-git clone <repository-url>
-cd aieebss
-npm install
+```mermaid
+graph TD
+    subgraph Frontend "Frontend (Next.js & React)"
+        UI[웹 인터페이스]
+        Student[학생 평가 환경]
+        Teacher[교사용 대시보드]
+    end
+    
+    subgraph Backend_Data "Backend & Database"
+        API[API 라우트]
+        DB[(Supabase DB)]
+        Storage[(Supabase Storage)]
+    end
+    
+    subgraph AI_Models "AI & STT 컴포넌트"
+        OpenAI[OpenAI (채점/전사/TTS)]
+        Gemini[Google Gemini API]
+        AWS[AWS Transcribe]
+        Azure[Azure Speech API]
+    end
+    
+    UI <--> API
+    Student --> UI
+    Teacher --> UI
+    
+    API <--> DB : 문항 호출 및 결과 저장
+    API <--> Storage : 응답 오디오 저장/로드
+    API <--> AI_Models : 음성 전사(STT) 및 채점/피드백 요청
 ```
 
-### 2. 환경 변수
+---
 
-[env.example](env.example)를 참고해 **`.env.local`** 을 만듭니다. 이 파일과 실제 키 값은 **Git에 커밋하지 마세요** (`.gitignore`에 `.env*` 포함).
+## 🔄 시스템 작동 워킹 플로우 (Working Flow)
 
-**필수(기본 동작에 가깝게 쓸 때)**
+학생이 평가를 진행할 때 문항이 어디서 추출되고, 음성이 전송되어 어떻게 평가 결과로 이어지는지 나타내는 전반적인 흐름입니다.
 
-| 변수 | 설명 |
-|------|------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon 키 |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용. RLS를 우회하는 관리 작업·일부 API에 사용. 클라이언트 번들에 넣지 않음 |
-| `OPENAI_API_KEY` | 전사, 채점·피드백, TTS 등 OpenAI 호출 |
-
-**선택(기능별)**
-
-| 변수 | 용도 |
-|------|------|
-| `GOOGLE_AI_API_KEY` | Gemini 기반 전사 등 |
-| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET_NAME` | AWS 전사·스토리지 연동 |
-| `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` | Azure Speech 전사 |
-| 마이그레이션 스크립트용 | `OLD_SUPABASE_URL`, `OLD_SUPABASE_SERVICE_ROLE_KEY` 등 (`scripts/` 주석 참고) |
-
-배포(Vercel 등)에서는 동일 변수를 프로젝트 설정에 넣고, **Service Role·OpenAI·클라우드 키는 절대 공개 저장소나 클라이언트 코드에 넣지 않습니다.**
-
-### 3. Supabase
-
-최소한 `test_results`, `user_profiles`, `teacher_student_assignments` 및 녹음 스토리지 버킷(예: `student-recordings`) 등이 앱에서 사용됩니다. 에이전트·생성 문항·PDF 업로드 등은 추가 테이블·정책이 필요할 수 있습니다. 상세 스키마와 운영 절차는 저장소의 마이그레이션 스크립트와 문서를 함께 확인하세요.
-
-- 교사·매핑 설정 개요: [docs/TEACHER_SETUP_GUIDE.md](docs/TEACHER_SETUP_GUIDE.md)
-
-### 4. 개발 서버
-
-```bash
-npm run dev
+```mermaid
+sequenceDiagram
+    participant Student as 학생
+    participant DB as 데이터베이스 (Test Items DB)
+    participant UI as 앱 화면 (Client)
+    participant AI as AI 전사/평가 모델
+    participant Storage as 서버 스토리지
+    
+    Student->>UI: 교시별 평가 시작
+    UI->>DB: 현재 단계에 맞는 학습 문항 데이터 로드
+    DB-->>UI: 학생이 볼 수 있도록 문항 텍스트/이미지 제공
+    Student->>UI: 문항을 듣거나 읽고 음성 응답 녹음 (또는 선택)
+    UI->>Storage: 학생의 음성 원본 파일을 안전하게 저장
+    UI->>AI: 음성 데이터 전송 (STT 전사 요청)
+    AI-->>UI: 시스템이 인식한 텍스트 변환 결과 반환
+    UI->>AI: 변환된 텍스트로 LLM 채점 및 피드백 데이터 요청
+    AI-->>UI: 점수, 발음 정확도, 개선점 반환
+    UI->>DB: 분석된 최종 평가 결과 데이터 저장 (Teacher가 열람)
+    UI-->>Student: 다음 문항으로 자동 전환 또는 세션 종료
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000) 을 엽니다.
+---
 
-### 5. 콘텐츠·오디오 생성 스크립트 (선택)
+## 🧑‍🏫 교사 관리 기능 시각화
 
-`scripts/` 아래에 교시별 오디오·이미지 생성 등 개발·콘텐츠용 스크립트가 있습니다. 실행 전 `.env.local`에 필요한 API 키를 두고, 레포지토리에는 생성물만 필요 시 커밋 여부를 판단하면 됩니다.
+교사 계정의 도구들은 학생의 평가 데이터를 면밀히 관리할 수 있도록 설계되었습니다.
 
-### 6. npm 스크립트 (데이터·배포 보조)
-
-| 명령 | 설명 |
-|------|------|
-| `npm run dev` | Turbopack 개발 서버 |
-| `npm run build` / `npm run start` | 프로덕션 빌드·실행 |
-| `npm run lint` | ESLint |
-| `npm run migrate-database` | DB 마이그레이션 스크립트 (`scripts/migrate-database.ts`) |
-| `npm run migrate-auth-only` | Auth 사용자만 마이그레이션 |
-| `npm run migrate-storage` | 스토리지 마이그레이션 |
-| `npm run deploy` | 자동 배포 스크립트 (`scripts/auto-deploy.ts`) |
-| `npm run monitor` | 배포 모니터링 (`scripts/monitor-deployment.ts`) |
-
-### 7. E2E 테스트
-
-Playwright가 설정되어 있습니다. 실행 예:
-
-```bash
-npx playwright test
+```mermaid
+mindmap
+  root((교사 관리 도구))
+    대시보드
+      학급 전체 평균 요약
+      학생별 학습 진척도
+    학생 상세
+      개별 세션 피드백
+      문항별 학업 성취 조회
+    음성 인식 정확도
+      AI 전사 모델별 신뢰도 비교
+      발음/억양 문제점 파악
+    문항 및 교육 관리
+      PDF 교육과정 업로드
+      AI 문항 자동 생성 및 검토
+    결과 내보내기 다운로드
+      Excel 데이터 변환
+      학부모/학교 제출용 정리
 ```
 
-## 교사 화면 (요약)
+---
 
-- `/teacher/dashboard` — 담당 학생 요약·통계
-- `/teacher/student-detail` — 학생별 상세
-- `/teacher/transcription-accuracy` — 전사 정확도 관련 도구
-- `/teacher/test-items`, `/teacher/generate-items`, `/teacher/curriculum-data` — 문항·생성·교육과정
+## 📁 간소화된 파일 구조 (유기적 작동 환경)
 
-## 배포
+프로젝트 내부의 수많은 경로는 하나의 핵심 디렉토리 구조에서 밀접하게 작동합니다.
 
-- [vercel.json](vercel.json) — API 라우트 `maxDuration`, CORS·보안 헤더, rewrite 등이 정의되어 있습니다. 배포 후 라우팅이 기대와 다르면 이 설정과 Next의 라우팅을 함께 검토하세요.
-- Vercel 사용 시 GitHub 연결 후 환경 변수를 프로젝트에 등록합니다.
+- **`src/app/`**: 웹 인터페이스 경로, API 라우팅 등 프로그램 구동의 뼈대
+- **`src/components/`**: 버튼, 카드 등 시각적이고 재사용이 가능한 디자인 덩어리들
+- **`src/lib/`**: 데이터 연동(Supabase) 및 핵심 AI 판독 연결 로직들
+> 모든 파일은 이 **`src/` 경로 안에서 하나의 어플리케이션으로 집중되어 유기적으로 작동**하므로, 유지보수 및 코드 파악이 매우 직관적입니다.
 
-## 프로젝트 구조 (요약)
+---
 
-```
-src/
-├── app/
-│   ├── api/
-│   │   ├── submit-p1_alphabet/ … submit-p6_comprehension/   # 교시별 제출
-│   │   ├── feedback/          # 세션 피드백
-│   │   ├── tts/               # TTS
-│   │   ├── teacher/           # 교사 API(내보내기, 학생 결과, 전사 통계 등)
-│   │   ├── agents/            # 문항 생성 등
-│   │   ├── curriculum/        # 교육과정 PDF
-│   │   ├── generated-items/   # 생성 문항 CRUD·승인
-│   │   └── …
-│   ├── lobby/
-│   ├── test/                  # p1_alphabet … p6_comprehension
-│   ├── results/
-│   ├── teacher/
-│   └── page.tsx               # 로그인
-├── components/
-├── lib/
-│   ├── agents/
-│   ├── feedback/
-│   ├── services/              # 전사 어댑터 등
-│   ├── supabase/
-│   └── …
-└── middleware.ts              # 세션 갱신(인증 강제는 페이지·API에서 처리)
-```
+## 🤖 AI 모델 선택 및 편집 모드
 
-## 설정 파일
+AIDAPEL은 단일 모델에 종속되지 않습니다. 사용자는 상황과 비용에 맞춰 구동시킬 AI 모델을 쉽게 교체하고 편집할 수 있습니다. 
+기능을 변경하고 싶다면, 시스템 환경 변수(`.env.local`)를 통해 원하는 API 키를 켜고 끄는 방식으로 다음과 같은 모델을 자율적으로 선택할 수 있습니다:
 
-- [next.config.ts](next.config.ts) — 이미지 원격 패턴, 보안 헤더, `serverExternalPackages` 등
-- [tsconfig.json](tsconfig.json)
-- [playwright.config.ts](playwright.config.ts)
+- **OpenAI API**: 강력하고 범용적인 텍스트 해석 및 채점에 우선 사용
+- **Google Gemini, AWS Transcribe, Azure Speech**: 다양한 음성 인식(STT) 대안으로 손쉽게 코드 선택 편집 가능
 
-## 추가 문서
+---
 
-저장소 루트가 아니라 **`docs/`** 아래를 기준으로 합니다.
+## 🚀 개발 서버 시작하기
 
-- [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) — 프로젝트 개요
-- [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) — 데모 가이드
-- [docs/PRESENTATION_SLIDES.md](docs/PRESENTATION_SLIDES.md) — 발표 슬라이드 초안
-- [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md), [docs/NEW_PROJECT_SETUP_GUIDE.md](docs/NEW_PROJECT_SETUP_GUIDE.md) 등 기타 운영·마이그레이션 문서
+1. **저장소 클론 및 패키지 설치**
+   ```bash
+   npm install
+   ```
+2. **환경변수 설정**
+   디렉토리에 `.env.local` 파일을 생성하고, Supabase, OpenAI 등의 필수 시스템 API 키를 입력하여 AI 모델 활성화 모드를 설정합니다. (`env.example` 파일 참조)
+3. **가동**
+   ```bash
+   npm run dev
+   ```
+   이후 `http://localhost:3000` 에 접속하여 AIDAPEL의 기능을 직접 확인할 수 있습니다.
 
-## 라이선스
+---
+---
 
-저장소에 별도 `LICENSE` 파일이 없습니다. 사용·배포 조건이 필요하면 저장소 소유자에게 확인하거나 라이선스 파일을 추가하세요.
+# 🇬🇧 English Summary
+
+**AI Diagnostic Assessment Platform for Primary English Literacy: AIDAPEL**
+
+> **Note**: For extensive operational details and model evaluations, please refer to the main **[Development Report](./AI_초등영어_기초학력_진단_플랫폼_개발_보고서.md)**. This README is intended as a swift introduction to system operations.
+
+### System Overview
+AIDAPEL is designed to evaluate and assist primary learners with their foundational English skills by organically integrating Next.js, Supabase, and multiple AI integrations under simplified source architectures (`src/` directory).
+
+### Core Highlights
+1. **Adaptive Architecture**: A unified system that passes student data directly from test items (DB) -> interactions -> audio storage -> diverse AI transcription validations.
+2. **Flexible AI Model Adjustments**: Developers can easily toggle between OpenAI, AWS, Gemini, or Azure for the best transcription (STT) tasks by simply managing environmental variables.
+3. **Teacher Management Suite**: Visual dashboards allow educators to effortlessly track student performance, compare multi-model AI transcription accuracy, auto-generate test items per curricula, and export result metrics.
+
+### Getting Started
+Simply run `npm install`, add your AI/DB tokens to `.env.local`, and run `npm run dev` to launch the platform locally!
