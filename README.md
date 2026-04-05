@@ -14,33 +14,33 @@
 본 플랫폼의 시스템은 다음의 아키텍처로 구성되어 다양한 모델이 유기적으로 데이터를 주고받습니다.
 
 ```mermaid
-graph TD
-    subgraph Frontend[Frontend Next.js and React]
+flowchart TD
+    subgraph frontend ["Frontend (Next.js and React)"]
         UI[웹 인터페이스]
         Student[학생 평가 환경]
         Teacher[교사용 대시보드]
     end
-    
-    subgraph Backend_Data[Backend and Database]
+
+    subgraph backend ["Backend and Database"]
         API[API 라우트]
         DB[(Supabase DB)]
         Storage[(Supabase Storage)]
     end
-    
-    subgraph AI_Models[AI and STT 컴포넌트]
+
+    subgraph aimodels ["AI and STT"]
         OpenAI[OpenAI 채점 전사 TTS]
         Gemini[Google Gemini API]
         AWS[AWS Transcribe]
         Azure[Azure Speech API]
     end
-    
+
     UI <--> API
     Student --> UI
     Teacher --> UI
-    
-    API <--> DB : 문항 호출 및 결과 저장
-    API <--> Storage : 응답 오디오 저장/로드
-    API <--> AI_Models : 음성 전사 STT 및 채점/피드백 요청
+
+    API <-->|문항 호출 및 결과 저장| DB
+    API <-->|응답 오디오 저장·로드| Storage
+    API <-->|음성 전사·채점·피드백| OpenAI
 ```
 
 ---
@@ -52,9 +52,9 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant Student as 학생
-    participant DB as 데이터베이스 (Test Items DB)
-    participant UI as 앱 화면 (Client)
-    participant AI as AI 전사/평가 모델
+    participant DB as "데이터베이스 Test Items"
+    participant UI as "앱 화면 Client"
+    participant AI as "AI 전사 평가"
     participant Storage as 서버 스토리지
     
     Student->>UI: 교시별 평가 시작
