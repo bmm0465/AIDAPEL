@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
     
-    if (!profile || profile.role !== 'teacher') {
+    if (!profile || (profile.role !== 'teacher' && profile.role !== 'admin')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
@@ -79,11 +79,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const testType = searchParams.get('test_type') || null; // null이면 모든 교시
     
-    // 담당 학생 목록 가져오기
-    const { data: assignments, error: assignmentsError } = await service
-      .from('teacher_student_assignments')
-      .select('student_id')
-      .eq('teacher_id', user.id);
+    // 담당 학생 목록 가져오기 (admin은 모든 학생)
+    let assignments: Array<{ student_id: string }> | null = null;
+    let assignmentsError: Error | null = null;
+
+    if (profile.role === 'admin') {
+      const result = await service
+        .from('teacher_student_assignments')
+        .select('student_id');
+      assignments = result.data;
+      assignmentsError = result.error as Error | null;
+    } else {
+      const result = await service
+        .from('teacher_student_assignments')
+        .select('student_id')
+        .eq('teacher_id', user.id);
+      assignments = result.data;
+      assignmentsError = result.error as Error | null;
+    }
     
     if (assignmentsError) {
       console.error('[Export] 학생 목록 조회 오류:', assignmentsError);

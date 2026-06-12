@@ -58,8 +58,9 @@ export default async function TeacherDashboard() {
     .eq('id', user.id)
     .single();
 
-  // 프로필이 없거나 교사가 아닌 경우
-  if (profileError || !profile || profile.role !== 'teacher') {
+  // 프로필이 없거나 교사/관리자가 아닌 경우
+  const isTeacherOrAdmin = profile && (profile.role === 'teacher' || profile.role === 'admin');
+  if (profileError || !profile || !isTeacherOrAdmin) {
     return (
       <div style={{ 
         backgroundColor: '#f3f4f6', 
@@ -105,10 +106,24 @@ export default async function TeacherDashboard() {
   }
 
   // 담당 학생 목록 가져오기
-  const { data: assignments, error: assignmentsError } = await supabase
-    .from('teacher_student_assignments')
-    .select('student_id, class_name')
-    .eq('teacher_id', user.id);
+  // admin인 경우 모든 학생 배정을 가져오고, teacher인 경우 자기 학생만
+  let assignments: Array<{ student_id: string; class_name: string | null }> | null = null;
+  let assignmentsError: Error | null = null;
+
+  if (profile.role === 'admin') {
+    const result = await supabase
+      .from('teacher_student_assignments')
+      .select('student_id, class_name');
+    assignments = result.data;
+    assignmentsError = result.error as Error | null;
+  } else {
+    const result = await supabase
+      .from('teacher_student_assignments')
+      .select('student_id, class_name')
+      .eq('teacher_id', user.id);
+    assignments = result.data;
+    assignmentsError = result.error as Error | null;
+  }
 
   if (assignmentsError) {
     console.error('학생 목록 조회 에러:', assignmentsError);

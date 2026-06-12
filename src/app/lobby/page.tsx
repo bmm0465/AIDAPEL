@@ -52,6 +52,7 @@ export default function LobbyPage() {
   const { success } = useToastHelpers();
   const [hasTestResults, setHasTestResults] = useState(false);
   const [isTeacher, setIsTeacher] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [loggingOut, setLoggingOut] = useState(false);
@@ -82,7 +83,8 @@ export default function LobbyPage() {
           .eq('id', user.id)
           .single();
         
-        setIsTeacher(profile?.role === 'teacher');
+        setIsTeacher(profile?.role === 'teacher' || profile?.role === 'admin');
+        setIsAdmin(profile?.role === 'admin');
         setUserName(profile?.full_name || '');
         
         setLoading(false);
@@ -246,7 +248,23 @@ export default function LobbyPage() {
           gap: '1rem',
           marginTop: '2rem'
         }}>
-          {/* 교사 대시보드 버튼 (교사일 때만 표시) */}
+          {/* 관리자 대시보드 버튼 (admin일 때만 표시) */}
+          {isAdmin && (
+            <button
+              style={{
+                ...buttonStyle,
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%)',
+                fontSize: '1rem',
+                boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)',
+              }}
+              onClick={() => router.push('/admin/dashboard')}
+              className="admin-button"
+            >
+              🏛️ 관리자 대시보드
+            </button>
+          )}
+
+          {/* 교사 대시보드 버튼 (교사 또는 admin일 때 표시) */}
           {isTeacher && (
             <button
               style={{

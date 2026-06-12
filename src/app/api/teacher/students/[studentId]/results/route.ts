@@ -39,8 +39,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     console.log('API: Profile check - profile:', profile)
     
-    if (!profile || profile.role !== 'teacher') {
-      console.log('API: Not a teacher')
+    if (!profile || (profile.role !== 'teacher' && profile.role !== 'admin')) {
+      console.log('API: Not a teacher or admin')
       return NextResponse.json({ error: 'Forbidden' }, { 
         status: 403,
         headers: {
@@ -51,13 +51,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       })
     }
 
-    // Verify teacher-student assignment
-    const { data: assignment } = await service
-      .from('teacher_student_assignments')
-      .select('class_name')
-      .eq('teacher_id', user.id)
-      .eq('student_id', studentId)
-      .single()
+    // Verify teacher-student assignment (admin은 건너뜀)
+    let assignment: { class_name: string | null } | null = null;
+    
+    if (profile.role === 'admin') {
+      // admin은 모든 학생에 접근 가능 - 학생의 class_name을 user_profiles에서 가져옴
+      const { data: studentProfile } = await service
+        .from('user_profiles')
+        .select('class_name')
+        .eq('id', studentId)
+        .single();
+      assignment = { class_name: studentProfile?.class_name || '미지정' };
+    } else {
+      const { data: assignmentData } = await service
+        .from('teacher_student_assignments')
+        .select('class_name')
+        .eq('teacher_id', user.id)
+        .eq('student_id', studentId)
+        .single();
+      assignment = assignmentData;
+    }
 
     console.log('API: Assignment check - assignment:', assignment)
     
