@@ -116,14 +116,15 @@ export async function GET() {
     // 모든 테스트 결과 가져오기
     let allTestResults: TestResult[] = [];
     if (allStudentIds.length > 0) {
-      // 배치로 처리
-      const batchSize = 50;
+      // 배치로 처리 (Supabase 기본 limit 1000개 제한 우회)
+      const batchSize = 10;
       for (let i = 0; i < allStudentIds.length; i += batchSize) {
         const batch = allStudentIds.slice(i, i + batchSize);
         const { data: batchResults } = await service
           .from('test_results')
           .select('user_id, test_type, is_correct, accuracy, created_at, time_taken')
-          .in('user_id', batch);
+          .in('user_id', batch)
+          .limit(10000);
         if (batchResults) {
           allTestResults = [...allTestResults, ...batchResults];
         }
@@ -146,10 +147,11 @@ export async function GET() {
         const testTypes = [...new Set(studentTests.map(t => t.test_type))];
         const completionRate = Math.round((testTypes.length / 6) * 100);
 
-        // 평균 정확도
-        const accuracyTests = studentTests.filter(t => t.accuracy !== null);
-        const avgAccuracy = accuracyTests.length > 0
-          ? Math.round(accuracyTests.reduce((sum, t) => sum + (t.accuracy || 0), 0) / accuracyTests.length)
+        // 평균 정확도 (is_correct 기준)
+        const validTests = studentTests.filter(t => t.is_correct !== null);
+        const correctTests = validTests.filter(t => t.is_correct === true);
+        const avgAccuracy = validTests.length > 0
+          ? Math.round((correctTests.length / validTests.length) * 100)
           : 0;
 
         // 마지막 테스트 날짜
