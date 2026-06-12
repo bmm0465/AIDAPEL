@@ -277,7 +277,7 @@ export default function AdminDashboard() {
           <StatCard value={summary.totalTeachers} label="전체 교사 수" color="#6366f1" bgColor="rgba(99, 102, 241, 0.1)" borderColor="rgba(99, 102, 241, 0.3)" />
           <StatCard value={summary.totalStudents} label="전체 학생 수" color="#10b981" bgColor="rgba(16, 185, 129, 0.1)" borderColor="rgba(16, 185, 129, 0.3)" />
           <StatCard value={summary.totalTests} label="전체 테스트 수" color="#f59e0b" bgColor="rgba(245, 158, 11, 0.1)" borderColor="rgba(245, 158, 11, 0.3)" />
-          <StatCard value={`${summary.avgAccuracy}%`} label="전체 평균 정확도" color="#8b5cf6" bgColor="rgba(139, 92, 246, 0.1)" borderColor="rgba(139, 92, 246, 0.3)" />
+          <StatCard value={`${summary.avgAccuracy}%`} label="전체 평균 정답률" color="#8b5cf6" bgColor="rgba(139, 92, 246, 0.1)" borderColor="rgba(139, 92, 246, 0.3)" />
         </div>
 
         {/* 교사별 학생 목록 */}
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
                   <MiniStat value={teacher.totalStudents} label="학생" color="#10b981" />
                   <MiniStat value={teacher.totalTests} label="테스트" color="#3b82f6" />
-                  <MiniStat value={`${teacher.avgAccuracy}%`} label="정확도" color="#8b5cf6" />
+                  <MiniStat value={`${teacher.avgAccuracy}%`} label="정답률" color="#8b5cf6" />
                 </div>
               </div>
 
@@ -384,7 +384,7 @@ export default function AdminDashboard() {
                         <div>학생 정보</div>
                         <div style={{ textAlign: 'center' }}>테스트 수</div>
                         <div style={{ textAlign: 'center' }}>완료율</div>
-                        <div style={{ textAlign: 'center' }}>평균 정확도</div>
+                        <div style={{ textAlign: 'center' }}>평균 정답률</div>
                         <div style={{ textAlign: 'center' }}>평균 시간</div>
                         <div style={{ textAlign: 'center' }}>마지막 테스트</div>
                       </div>
@@ -452,7 +452,7 @@ export default function AdminDashboard() {
                               </span>
                             </div>
 
-                            {/* 평균 정확도 */}
+                            {/* 평균 정답률 */}
                             <div style={{ textAlign: 'center' }}>
                               <span style={{
                                 fontSize: '1.25rem',
